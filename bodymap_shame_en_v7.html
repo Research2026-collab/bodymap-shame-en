@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Body Map – Shame</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    background: #f7f5f2;
+    color: #222;
+    min-height: 100vh;
+    padding: 2rem 1rem;
+  }
+
+  .wrap {
+    max-width: 780px;
+    margin: 0 auto;
+  }
+
+  h1 {
+    font-size: 28px;
+    font-weight: 600;
+    text-align: center;
+    margin-bottom: 0.75rem;
+    letter-spacing: -0.01em;
+  }
+
+  .subtitle {
+    font-size: 15px;
+    color: #555;
+    text-align: center;
+    line-height: 1.65;
+    max-width: 540px;
+    margin: 0 auto 2rem;
+  }
+
+  .subtitle em { font-style: italic; }
+
+  .layout {
+    display: grid;
+    grid-template-columns: 260px 1fr;
+    gap: 2rem;
+    align-items: start;
+  }
+
+  /* ── Silhouette ── */
+  .silhouette-wrap {
+    position: relative;
+    width: 260px;
+  }
+
+  #body-svg {
+    width: 100%;
+    display: block;
+  }
+
+  .zone-dot {
+    cursor: pointer;
+  }
+
+  .zone-dot circle {
+    transition: fill 0.15s;
+  }
+
+  .zone-dot:hover circle {
+    opacity: 0.82;
+  }
+
+  /* ── Right panel ── */
+  .panel {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .box {
+    background: #fff;
+    border: 0.5px solid #ddd;
+    border-radius: 10px;
+    padding: 1rem 1.125rem;
+  }
+
+  .box-label {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    color: #999;
+    margin-bottom: 0.5rem;
+  }
+
+  .tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    min-height: 28px;
+  }
+
+  .tag {
+    background: #f0d6dc;
+    color: #a03050;
+    font-size: 12px;
+    font-weight: 500;
+    padding: 4px 11px;
+    border-radius: 999px;
+  }
+
+  .placeholder {
+    font-size: 14px;
+    color: #aaa;
+    font-style: italic;
+  }
+
+  textarea {
+    width: 100%;
+    border: 0.5px solid #ddd;
+    border-radius: 10px;
+    padding: 0.75rem 1rem;
+    font-size: 14px;
+    font-family: inherit;
+    color: #222;
+    background: #fff;
+    resize: vertical;
+    min-height: 100px;
+    line-height: 1.55;
+    outline: none;
+  }
+
+  textarea:focus { border-color: #c4506a; }
+  textarea::placeholder { color: #bbb; }
+
+  .btn-row {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+
+  .btn-primary {
+    background: #c4506a;
+    color: #fff;
+    border: none;
+    padding: 10px 26px;
+    border-radius: 999px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: opacity 0.15s;
+  }
+
+  .btn-primary:hover { opacity: 0.88; }
+  .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  .btn-ghost {
+    background: transparent;
+    border: 0.5px solid #ccc;
+    color: #666;
+    padding: 10px 20px;
+    border-radius: 999px;
+    font-size: 14px;
+    cursor: pointer;
+  }
+
+  .btn-ghost:hover { background: #f5f5f5; }
+
+  .status {
+    font-size: 13px;
+    color: #666;
+    min-height: 20px;
+  }
+
+  .status.ok { color: #2e7d32; font-weight: 500; }
+  .status.err { color: #c0392b; }
+
+  /* ── Thank-you screen ── */
+  .thankyou {
+    display: none;
+    text-align: center;
+    padding: 3rem 1rem;
+  }
+
+  .thankyou h2 { font-size: 22px; font-weight: 500; margin-bottom: 0.75rem; }
+  .thankyou p { font-size: 15px; color: #555; line-height: 1.6; }
+
+  .checkmark {
+    width: 56px;
+    height: 56px;
+    background: #c4506a;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 1.25rem;
+  }
+
+  .checkmark svg { width: 28px; height: 28px; }
+
+  /* ── Responsive ── */
+  @media (max-width: 600px) {
+    .layout { grid-template-columns: 1fr; }
+    .silhouette-wrap { width: 200px; margin: 0 auto; }
+  }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <h1>Body Map</h1>
+  <p class="subtitle">Where do you feel shame? What exactly do you experience? Use the silhouette to mark the corresponding body areas. Multiple markings are possible. In the field below, you may add thoughts, feelings, or further comments. Then please click <em>Submit response</em>.</p>
+
+  <div id="main-form">
+    <div class="layout">
+
+      <!-- SVG Silhouette -->
+      <div class="silhouette-wrap">
+        <svg id="body-svg" viewBox="0 0 200 530" xmlns="http://www.w3.org/2000/svg">
+
+          <!-- Body -->
+          <ellipse cx="100" cy="42" rx="26" ry="32" fill="#e8c9a0" stroke="#5a7080" stroke-width="2.2"/>
+          <rect x="90" y="71" width="20" height="16" fill="#e8c9a0"/>
+          <path d="M64,86 Q56,92 53,112 L51,188 Q51,197 64,200 L136,200 Q149,197 149,188 L147,112 Q144,92 136,86 Z" fill="#e8c9a0" stroke="#5a7080" stroke-width="2.2"/>
+
+          <!-- Left arm -->
+          <path d="M64,90 Q44,97 38,118 L34,172 Q32,180 40,182 L53,182 L53,108 Z" fill="#e8c9a0" stroke="#5a7080" stroke-width="2.2" stroke-linejoin="round"/>
+          <path d="M35,172 Q30,183 32,198 L37,226 Q39,234 46,234 L53,234 L53,180 L40,180 Z" fill="#e8c9a0" stroke="#5a7080" stroke-width="2.2"/>
+          <!-- Left hand (clean oval) -->
+          <ellipse cx="43" cy="245" rx="11" ry="15" fill="#e8c9a0" stroke="#5a7080" stroke-width="2"/>
+
+          <!-- Right arm -->
+          <path d="M136,90 Q156,97 162,118 L166,172 Q168,180 160,182 L147,182 L147,108 Z" fill="#e8c9a0" stroke="#5a7080" stroke-width="2.2" stroke-linejoin="round"/>
+          <path d="M165,172 Q170,183 168,198 L163,226 Q161,234 154,234 L147,234 L147,180 L160,180 Z" fill="#e8c9a0" stroke="#5a7080" stroke-width="2.2"/>
+          <!-- Right hand (clean oval) -->
+          <ellipse cx="157" cy="245" rx="11" ry="15" fill="#e8c9a0" stroke="#5a7080" stroke-width="2"/>
+
+          <!-- Hips -->
+          <path d="M64,198 Q56,208 57,222 L59,242 L141,242 L143,222 Q144,208 136,198 Z" fill="#e8c9a0" stroke="#5a7080" stroke-width="2.2"/>
+
+          <!-- Left leg -->
+          <path d="M59,238 Q55,252 56,292 L56,334 Q57,342 70,342 L82,342 L82,242 Z" fill="#e8c9a0" stroke="#5a7080" stroke-width="2.2"/>
+          <path d="M57,330 Q55,348 57,384 L59,424 Q61,432 72,432 L82,432 L82,340 L70,340 Z" fill="#e8c9a0" stroke="#5a7080" stroke-width="2.2"/>
+          <!-- Left foot -->
+          <ellipse cx="71" cy="442" rx="14" ry="9" fill="#e8c9a0" stroke="#5a7080" stroke-width="2"/>
+          <ellipse cx="61" cy="448" rx="8" ry="6" fill="#e8c9a0" stroke="#5a7080" stroke-width="1.5"/>
+
+          <!-- Right leg -->
+          <path d="M141,238 Q145,252 144,292 L144,334 Q143,342 130,342 L118,342 L118,242 Z" fill="#e8c9a0" stroke="#5a7080" stroke-width="2.2"/>
+          <path d="M143,330 Q145,348 143,384 L141,424 Q139,432 128,432 L118,432 L118,340 L130,340 Z" fill="#e8c9a0" stroke="#5a7080" stroke-width="2.2"/>
+          <!-- Right foot -->
+          <ellipse cx="129" cy="442" rx="14" ry="9" fill="#e8c9a0" stroke="#5a7080" stroke-width="2"/>
+          <ellipse cx="139" cy="448" rx="8" ry="6" fill="#e8c9a0" stroke="#5a7080" stroke-width="1.5"/>
+
+          <!-- Zone dots: 1=Kopf, 2=Schultern, 3=Brust, 4=Magen, 5=Unterbauch, 6=Hände, 7=Knie, 8=Füße -->
+
+          <g class="zone-dot" id="dot-1" onclick="toggleZone(1)" aria-label="Kopf">
+            <circle cx="100" cy="28" r="14" fill="#1a1a1a"/>
+            <text x="100" y="33" text-anchor="middle" fill="white" font-size="13" font-family="sans-serif" font-weight="500">1</text>
+          </g>
+
+          <g class="zone-dot" id="dot-2" onclick="toggleZone(2)" aria-label="Schultern">
+            <circle cx="54" cy="100" r="14" fill="#1a1a1a"/>
+            <text x="54" y="105" text-anchor="middle" fill="white" font-size="13" font-family="sans-serif" font-weight="500">2</text>
+          </g>
+
+          <g class="zone-dot" id="dot-3" onclick="toggleZone(3)" aria-label="Brust">
+            <circle cx="104" cy="125" r="14" fill="#1a1a1a"/>
+            <text x="104" y="130" text-anchor="middle" fill="white" font-size="13" font-family="sans-serif" font-weight="500">3</text>
+          </g>
+
+          <g class="zone-dot" id="dot-4" onclick="toggleZone(4)" aria-label="Magen">
+            <circle cx="100" cy="162" r="14" fill="#1a1a1a"/>
+            <text x="100" y="167" text-anchor="middle" fill="white" font-size="13" font-family="sans-serif" font-weight="500">4</text>
+          </g>
+
+          <g class="zone-dot" id="dot-5" onclick="toggleZone(5)" aria-label="Unterer Bauchbereich">
+            <circle cx="100" cy="218" r="14" fill="#1a1a1a"/>
+            <text x="100" y="223" text-anchor="middle" fill="white" font-size="13" font-family="sans-serif" font-weight="500">5</text>
+          </g>
+
+          <g class="zone-dot" id="dot-6" onclick="toggleZone(6)" aria-label="Hände">
+            <circle cx="38" cy="248" r="14" fill="#1a1a1a"/>
+            <text x="38" y="253" text-anchor="middle" fill="white" font-size="13" font-family="sans-serif" font-weight="500">6</text>
+          </g>
+
+          <g class="zone-dot" id="dot-7" onclick="toggleZone(7)" aria-label="Knie">
+            <circle cx="70" cy="342" r="14" fill="#1a1a1a"/>
+            <text x="70" y="347" text-anchor="middle" fill="white" font-size="13" font-family="sans-serif" font-weight="500">7</text>
+          </g>
+
+          <g class="zone-dot" id="dot-8" onclick="toggleZone(8)" aria-label="Füße">
+            <circle cx="78" cy="452" r="14" fill="#1a1a1a"/>
+            <text x="78" y="457" text-anchor="middle" fill="white" font-size="13" font-family="sans-serif" font-weight="500">8</text>
+          </g>
+
+        </svg>
+      </div>
+
+      <!-- Right panel -->
+      <div class="panel">
+        <div class="box">
+          <div class="box-label">Marked areas (<span id="mark-count">0</span>)</div>
+          <div class="tags" id="tag-container">
+            <span class="placeholder" id="placeholder-text">No areas marked yet.</span>
+          </div>
+        </div>
+
+        <div>
+          <div class="box-label" style="margin-bottom:0.4rem">Notes (optional)</div>
+          <textarea id="notes" placeholder="Any thoughts, feelings, or context you wish to add …"></textarea>
+        </div>
+
+        <div class="btn-row">
+          <button class="btn-primary" id="submit-btn" onclick="submitForm()">Submit response</button>
+          <button class="btn-ghost" onclick="resetForm()">Reset</button>
+        </div>
+
+        <div class="status" id="status-msg"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Thank-you screen -->
+  <div class="thankyou" id="thankyou">
+    <div class="checkmark">
+      <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="20 6 9 17 4 12"/>
+      </svg>
+    </div>
+    <h2>Thank you for your response.</h2>
+    <p>Your response has been recorded and contributes to research<br>on the bodily dimension of shame.</p>
+  </div>
+
+</div>
+
+<script>
+const ZONES = [
+  { id: 1, label: 'Head / Thoughts' },
+  { id: 2, label: 'Shoulders' },
+  { id: 3, label: 'Chest / Heart' },
+  { id: 4, label: 'Stomach' },
+  { id: 5, label: 'Lower abdomen' },
+  { id: 6, label: 'Hands' },
+  { id: 7, label: 'Knees' },
+  { id: 8, label: 'Feet' },
+];
+
+const FORMSPREE_URL = 'https://script.google.com/macros/s/AKfycbxWM-yxBH4gkRNS2AhoQna3oReh0EcYKGEBp9DfNRJw3HUkxiEGj0JLqmu_FPj-UQej/exec';
+const selected = new Set();
+
+function toggleZone(id) {
+  const dot = document.getElementById('dot-' + id);
+  const circle = dot.querySelector('circle');
+  if (selected.has(id)) {
+    selected.delete(id);
+    circle.setAttribute('fill', '#1a1a1a');
+  } else {
+    selected.add(id);
+    circle.setAttribute('fill', '#c4506a');
+  }
+  updateTags();
+}
+
+function updateTags() {
+  const container = document.getElementById('tag-container');
+  const placeholder = document.getElementById('placeholder-text');
+  document.getElementById('mark-count').textContent = selected.size;
+
+  if (selected.size === 0) {
+    container.innerHTML = '<span class="placeholder" id="placeholder-text">No areas marked yet.</span>';
+    return;
+  }
+
+  const sorted = [...selected].sort((a, b) => a - b);
+  container.innerHTML = sorted.map(id => {
+    const zone = ZONES.find(z => z.id === id);
+    return `<span class="tag">${zone.label}</span>`;
+  }).join('');
+}
+
+async function submitForm() {
+  if (selected.size === 0) {
+    setStatus('Please mark at least one body area.', '');
+    return;
+  }
+
+  const btn = document.getElementById('submit-btn');
+  btn.disabled = true;
+  setStatus('Sending …', '');
+
+  const zoneNames = [...selected].sort((a, b) => a - b)
+    .map(id => ZONES.find(z => z.id === id).label)
+    .join(', ');
+
+  const notes = document.getElementById('notes').value.trim();
+
+  try {
+    await fetch(FORMSPREE_URL, {
+      method: 'POST',
+      mode: 'no-cors',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        'Marked zones': zoneNames,
+        'Number of zones': selected.size,
+        'Notes': notes || '(none)',
+        'Timestamp': new Date().toLocaleString('en-GB'),
+      }),
+    });
+  } catch(e) {}
+
+  // Always show thank you - no-cors means we can't check res.ok
+  document.getElementById('main-form').style.display = 'none';
+  document.getElementById('thankyou').style.display = 'block';
+}
+
+
+function resetForm() {
+  selected.clear();
+  ZONES.forEach(z => {
+    const c = document.querySelector('#dot-' + z.id + ' circle');
+    if (c) c.setAttribute('fill', '#1a1a1a');
+  });
+  document.getElementById('notes').value = '';
+  updateTags();
+  setStatus('', '');
+}
+
+function setStatus(msg, type) {
+  const el = document.getElementById('status-msg');
+  el.textContent = msg;
+  el.className = 'status' + (type ? ' ' + type : '');
+}
+</script>
+</body>
+</html>
